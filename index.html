@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Slime Eating Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+        #stats {
+            position: absolute;
+            top: 10%;
+            right: 2%;
+            background-color: rgba(0, 0, 255, 0.5);
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            font-size: 18px;
+            width: 200px;
+            text-align: center;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        #level-bar {
+            margin-top: 10px;
+            width: 100%;
+            height: 10px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        #level-progress {
+            height: 100%;
+            width: 0;
+            background-color: #4caf50;
+            border-radius: 5px;
+            transition: width 0.2s;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center; color: #4caf50;">3D Slime Eating Game</h1>
+    <div id="stats">
+        <p id="level-display">Level: 1</p>
+        <p id="slime-count">Slimes Eaten: 0</p>
+        <div id="level-bar">
+            <div id="level-progress"></div>
+        </div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let level = 1;
+        let slimeCount = 0;
+        let levelUpThreshold = 10;
+        const levelDisplay = document.getElementById('level-display');
+        const slimeCountDisplay = document.getElementById('slime-count');
+        const levelProgress = document.getElementById('level-progress');
+
+        // Setup scene, camera, and renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas') });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Add lighting
+        const light = new THREE.PointLight(0xffffff, 1, 100);
+        light.position.set(10, 10, 10);
+        scene.add(light);
+
+        const ambientLight = new THREE.AmbientLight(0x404040); // soft white light
+        scene.add(ambientLight);
+
+        // Create ground
+        const groundGeometry = new THREE.PlaneGeometry(20, 20);
+        const groundMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+
+        // Create player (a sphere)
+        const playerGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const playerMaterial = new THREE.MeshStandardMaterial({ color: 0xff5722 });
+        const player = new THREE.Mesh(playerGeometry, playerMaterial);
+        scene.add(player);
+        player.position.set(0, 0.5, 0);
+
+        // Create slime (another sphere)
+        const slimeGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+        const slimeMaterial = new THREE.MeshStandardMaterial({ color: 0x4caf50 });
+        const slime = new THREE.Mesh(slimeGeometry, slimeMaterial);
+        scene.add(slime);
+        moveSlime();
+
+        // Set camera position
+        camera.position.set(0, 5, 10);
+        camera.lookAt(0, 0, 0);
+
+        // Movement controls
+        const speed = 0.1;
+        const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+
+        document.addEventListener('keydown', (e) => {
+            if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
+        });
+
+        function movePlayer() {
+            if (keys.ArrowUp) player.position.z -= speed;
+            if (keys.ArrowDown) player.position.z += speed;
+            if (keys.ArrowLeft) player.position.x -= speed;
+            if (keys.ArrowRight) player.position.x += speed;
+        }
+
+        function moveSlime() {
+            slime.position.x = (Math.random() - 0.5) * 10;
+            slime.position.z = (Math.random() - 0.5) * 10;
+        }
+
+        function checkCollision() {
+            const distance = player.position.distanceTo(slime.position);
+            if (distance < 0.8) {
+                slimeCount++;
+                slimeCountDisplay.innerText = `Slimes Eaten: ${slimeCount}`;
+                const progress = (slimeCount % levelUpThreshold) / levelUpThreshold;
+                levelProgress.style.width = `${progress * 100}%`;
+
+                if (slimeCount % levelUpThreshold === 0) {
+                    level++;
+                    levelUpThreshold += 5; // Increase threshold by 5 each level
+                    levelDisplay.innerText = `Level: ${level}`;
+                }
+
+                moveSlime();
+            }
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            movePlayer();
+            checkCollision();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Handle resizing
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
